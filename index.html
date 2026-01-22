@@ -94,3 +94,75 @@
             p.style.left = Math.random() * (window.innerWidth - 20) + 'px';
             p.style.top = '-50px';
             container.appendChild(p);
+            powerups.push({ element: p, y: -50, speed: 3 });
+        }
+
+        function activateShield() {
+            isInvincible = true;
+            shield.style.display = 'block';
+            player.style.borderBottomColor = '#ffcc00';
+            setTimeout(() => {
+                isInvincible = false;
+                shield.style.display = 'none';
+                player.style.borderBottomColor = '#667eea';
+            }, 3000);
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            // 难度随时间增加
+            difficulty += 0.0005;
+            spawnRate = 0.05 * difficulty;
+            diffElement.innerText = `难度: ${difficulty.toFixed(1)}`;
+
+            if (Math.random() < spawnRate) createEnemy();
+            if (Math.random() < 0.005) createPowerup(); // 掉落率
+
+            const pRect = player.getBoundingClientRect();
+
+            // 更新敌人
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
+                e.y += e.speed;
+                e.element.style.top = e.y + 'px';
+                const eRect = e.element.getBoundingClientRect();
+
+                if (!isInvincible && !(pRect.right < eRect.left || pRect.left > eRect.right || 
+                    pRect.bottom < eRect.top || pRect.top > eRect.bottom)) {
+                    gameOver(); return;
+                }
+
+                if (e.y > window.innerHeight) {
+                    e.element.remove(); enemies.splice(i, 1);
+                    score++; scoreElement.innerText = `得分: ${score}`;
+                }
+            }
+
+            // 更新掉落物
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                const p = powerups[i];
+                p.y += p.speed;
+                p.element.style.top = p.y + 'px';
+                const pwRect = p.element.getBoundingClientRect();
+
+                if (!(pRect.right < pwRect.left || pRect.left > pwRect.right || 
+                    pRect.bottom < pwRect.top || pRect.top > pwRect.bottom)) {
+                    p.element.remove(); powerups.splice(i, 1);
+                    activateShield();
+                } else if (p.y > window.innerHeight) {
+                    p.element.remove(); powerups.splice(i, 1);
+                }
+            }
+            animationId = requestAnimationFrame(update);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            menu.style.display = 'block';
+            menu.innerHTML = `<h1>任务失败</h1><p>最终得分: ${score}</p><button onclick="startGame()">重启引擎</button>`;
+        }
+    </script>
+</body>
+</html>
