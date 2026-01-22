@@ -64,6 +64,10 @@
             player.style.top = shield.style.top = e.clientY + 'px';
         });
 
+        // 射击监听
+        document.addEventListener('mousedown', (e) => { if(gameActive) shoot(); });
+        document.addEventListener('keydown', (e) => { if(e.code === 'Space' && gameActive) shoot(); });
+
         function startGame() {
             score = 0; difficulty = 1.0; spawnRate = 0.05;
             gameActive = true; isInvincible = false;
@@ -77,6 +81,15 @@
             
             if (animationId) cancelAnimationFrame(animationId);
             update();
+        }
+
+        function shoot() {
+            const b = document.createElement('div');
+            b.className = 'bullet';
+            b.style.left = mouseX + 'px';
+            b.style.top = (mouseY - 20) + 'px';
+            container.appendChild(b);
+            bullets.push({ element: b, x: mouseX, y: mouseY - 20 });
         }
 
         function createEnemy() {
@@ -132,6 +145,8 @@
                     pRect.bottom < eRect.top || pRect.top > eRect.bottom)) {
                     gameOver(); return;
                 }
+                if (e.y > window.innerHeight) { e.element.remove(); enemies.splice(i, 1); }
+            }
 
                 if (e.y > window.innerHeight) {
                     e.element.remove(); enemies.splice(i, 1);
@@ -154,12 +169,18 @@
                     p.element.remove(); powerups.splice(i, 1);
                 }
             }
+
             animationId = requestAnimationFrame(update);
         }
 
+        function activateShield() {
+            isInvincible = true; shield.style.display = 'block';
+            player.style.borderBottomColor = '#ffcc00';
+            setTimeout(() => { isInvincible = false; shield.style.display = 'none'; player.style.borderBottomColor = '#667eea'; }, 3000);
+        }
+
         function gameOver() {
-            gameActive = false;
-            cancelAnimationFrame(animationId);
+            gameActive = false; cancelAnimationFrame(animationId);
             menu.style.display = 'block';
             menu.innerHTML = `<h1>任务失败</h1><p>最终得分: ${score}</p><button onclick="startGame()">重启引擎</button>`;
         }
