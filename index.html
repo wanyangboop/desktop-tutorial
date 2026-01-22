@@ -2,98 +2,105 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>wanyangboop 的银河流星空间</title>
+    <title>wanyangboop 的星际闪避</title>
     <style>
-        /* 基础样式：营造深邃宇宙感 */
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #020205; font-family: 'Microsoft YaHei', sans-serif; }
-        
-        /* 初始主页：带有银河质感的渐变 */
-        #home { display: flex; justify-content: center; align-items: center; height: 100vh; 
-                background: radial-gradient(circle at center, #1b2735 0%, #090a0f 100%); 
-                color: white; transition: opacity 1.5s; z-index: 10; position: relative; }
-        
-        .card { background: rgba(255, 255, 255, 0.03); padding: 3rem; border-radius: 20px; 
-                backdrop-filter: blur(15px); text-align: center; border: 1px solid rgba(255,255,255,0.1); 
-                box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
-
-        h1 { font-size: 2.5rem; margin-bottom: 10px; background: linear-gradient(to right, #fff, #667eea); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-
-        button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; 
-                 padding: 15px 40px; border-radius: 50px; cursor: pointer; font-size: 1.1rem; 
-                 margin-top: 25px; transition: 0.4s; box-shadow: 0 10px 20px rgba(102,126,234,0.3); }
-        button:hover { transform: scale(1.05); box-shadow: 0 15px 30px rgba(102,126,234,0.5); }
-
-        /* 银河与流星容器 */
-        #universe { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; opacity: 0; transition: opacity 2s; }
-        
-        /* 银河系光晕 */
-        .galaxy { position: absolute; width: 100%; height: 100%; 
-                  background: radial-gradient(ellipse at center, rgba(102,126,234,0.1) 0%, transparent 70%); 
-                  filter: blur(50px); transform: rotate(-20deg); }
-
-        /* 流星样式 */
-        .meteor { position: absolute; width: 2px; height: 100px; 
-                  background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%); 
-                  opacity: 0; animation: meteor-fall var(--d) linear infinite; }
-        
-        @keyframes meteor-fall {
-            0% { transform: translate(var(--x), -150px) rotate(35deg); opacity: 1; }
-            100% { transform: translate(calc(var(--x) + 500px), 110vh) rotate(35deg); opacity: 0; }
-        }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #050505; font-family: 'Arial', sans-serif; color: white; }
+        #game-container { position: relative; width: 100vw; height: 100vh; cursor: none; }
+        #player { position: absolute; width: 40px; height: 40px; background: #667eea; border-radius: 8px; box-shadow: 0 0 20px #667eea; transform: translate(-50%, -50%); pointer-events: none; z-index: 100; }
+        .enemy { position: absolute; width: 30px; height: 30px; background: #ff4b2b; border-radius: 50%; box-shadow: 0 0 15px #ff4b2b; }
+        #score { position: fixed; top: 20px; left: 20px; font-size: 24px; z-index: 200; }
+        #menu { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 300; background: rgba(0,0,0,0.8); padding: 40px; border-radius: 20px; border: 1px solid #667eea; }
+        button { background: #667eea; color: white; border: none; padding: 15px 40px; border-radius: 30px; cursor: pointer; font-size: 1.2rem; transition: 0.3s; }
+        button:hover { background: #764ba2; }
     </style>
 </head>
 <body>
 
-    <div id="home">
-        <div class="card">
-            <h1>你好，我是 wanyangboop</h1>
-            <p>准备好进入银河系看流星雨了吗？</p>
-            <button onclick="enterUniverse()">开启星际旅行</button>
+    <div id="game-container">
+        <div id="score">得分: 0</div>
+        <div id="player"></div>
+        <div id="menu">
+            <h1>星际闪避</h1>
+            <p>移动鼠标控制蓝色方块，躲避红色陨石！</p>
+            <button onclick="startGame()">开始游戏</button>
         </div>
     </div>
 
-    <div id="universe">
-        <div class="galaxy"></div>
-        <canvas id="starCanvas"></canvas>
-    </div>
-
     <script>
-        function enterUniverse() {
-            document.getElementById('home').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('home').style.display = 'none';
-                const universe = document.getElementById('universe');
-                universe.style.display = 'block';
-                setTimeout(() => universe.style.opacity = '1', 50);
-                initSky();
-            }, 1500);
+        const player = document.getElementById('player');
+        const container = document.getElementById('game-container');
+        const scoreElement = document.getElementById('score');
+        const menu = document.getElementById('menu');
+        
+        let score = 0;
+        let gameActive = false;
+        let enemies = [];
+
+        // 鼠标跟随
+        document.addEventListener('mousemove', (e) => {
+            player.style.left = e.clientX + 'px';
+            player.style.top = e.clientY + 'px';
+        });
+
+        function startGame() {
+            score = 0;
+            gameActive = true;
+            menu.style.display = 'none';
+            scoreElement.innerText = `得分: ${score}`;
+            enemies.forEach(e => e.remove());
+            enemies = [];
+            requestAnimationFrame(update);
         }
 
-        function initSky() {
-            const container = document.getElementById('universe');
-            // 1. 生成海量背景繁星（银河感）
-            for (let i = 0; i < 300; i++) {
-                const s = document.createElement('div');
-                s.style.position = 'absolute';
-                s.style.background = 'white';
-                s.style.borderRadius = '50%';
-                const size = Math.random() * 2;
-                s.style.width = s.style.height = size + 'px';
-                s.style.left = Math.random() * 100 + '%';
-                s.style.top = Math.random() * 100 + '%';
-                s.style.opacity = Math.random();
-                container.appendChild(s);
+        function createEnemy() {
+            if (!gameActive) return;
+            const enemy = document.createElement('div');
+            enemy.className = 'enemy';
+            enemy.style.left = Math.random() * (window.innerWidth - 30) + 'px';
+            enemy.style.top = '-50px';
+            container.appendChild(enemy);
+            enemies.push({
+                element: enemy,
+                y: -50,
+                speed: 3 + Math.random() * 5
+            });
+        }
+
+        function update() {
+            if (!gameActive) return;
+
+            // 每隔一段时间生成敌人
+            if (Math.random() < 0.05) createEnemy();
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
+                e.y += e.speed;
+                e.element.style.top = e.y + 'px';
+
+                // 碰撞检测
+                const rect1 = player.getBoundingClientRect();
+                const rect2 = e.element.getBoundingClientRect();
+
+                if (!(rect1.right < rect2.left || rect1.left > rect2.right || 
+                      rect1.bottom < rect2.top || rect1.top > rect2.bottom)) {
+                    gameOver();
+                }
+
+                // 移出屏幕后删除
+                if (e.y > window.innerHeight) {
+                    e.element.remove();
+                    enemies.splice(i, 1);
+                    score++;
+                    scoreElement.innerText = `得分: ${score}`;
+                }
             }
-            // 2. 生成流星雨
-            for (let i = 0; i < 20; i++) {
-                setTimeout(() => {
-                    const m = document.createElement('div');
-                    m.className = 'meteor';
-                    m.style.setProperty('--x', (Math.random() * 120 - 20) + 'vw');
-                    m.style.setProperty('--d', (Math.random() * 2 + 1) + 's');
-                    container.appendChild(m);
-                }, i * 300);
-            }
+            requestAnimationFrame(update);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            menu.style.display = 'block';
+            menu.innerHTML = `<h1>游戏结束</h1><p>最终得分: ${score}</p><button onclick="startGame()">再来一局</button>`;
         }
     </script>
 </body>
