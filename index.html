@@ -2,19 +2,44 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>wanyangboop 的星空空间</title>
+    <title>wanyangboop 的银河流星空间</title>
     <style>
-        /* 初始紫色主页样式 */
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: 'Microsoft YaHei', sans-serif; }
-        #home { display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; transition: opacity 1s; }
-        .card { background: rgba(255, 255, 255, 0.1); padding: 2.5rem; border-radius: 15px; backdrop-filter: blur(10px); text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.3); z-index: 10; }
-        button { background: transparent; color: white; border: 2px solid white; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-size: 16px; margin-top: 20px; transition: 0.3s; }
-        button:hover { background: white; color: #764ba2; }
+        /* 基础样式：营造深邃宇宙感 */
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #020205; font-family: 'Microsoft YaHei', sans-serif; }
+        
+        /* 初始主页：带有银河质感的渐变 */
+        #home { display: flex; justify-content: center; align-items: center; height: 100vh; 
+                background: radial-gradient(circle at center, #1b2735 0%, #090a0f 100%); 
+                color: white; transition: opacity 1.5s; z-index: 10; position: relative; }
+        
+        .card { background: rgba(255, 255, 255, 0.03); padding: 3rem; border-radius: 20px; 
+                backdrop-filter: blur(15px); text-align: center; border: 1px solid rgba(255,255,255,0.1); 
+                box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
 
-        /* 星空背景样式 */
-        #starfield { position: fixed; width: 100%; height: 100%; background: black; display: none; opacity: 0; transition: opacity 1s; }
-        .star { position: absolute; background: white; border-radius: 50%; opacity: 0.5; animation: twinkle var(--duration) infinite; }
-        @keyframes twinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+        h1 { font-size: 2.5rem; margin-bottom: 10px; background: linear-gradient(to right, #fff, #667eea); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; 
+                 padding: 15px 40px; border-radius: 50px; cursor: pointer; font-size: 1.1rem; 
+                 margin-top: 25px; transition: 0.4s; box-shadow: 0 10px 20px rgba(102,126,234,0.3); }
+        button:hover { transform: scale(1.05); box-shadow: 0 15px 30px rgba(102,126,234,0.5); }
+
+        /* 银河与流星容器 */
+        #universe { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; opacity: 0; transition: opacity 2s; }
+        
+        /* 银河系光晕 */
+        .galaxy { position: absolute; width: 100%; height: 100%; 
+                  background: radial-gradient(ellipse at center, rgba(102,126,234,0.1) 0%, transparent 70%); 
+                  filter: blur(50px); transform: rotate(-20deg); }
+
+        /* 流星样式 */
+        .meteor { position: absolute; width: 2px; height: 100px; 
+                  background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%); 
+                  opacity: 0; animation: meteor-fall var(--d) linear infinite; }
+        
+        @keyframes meteor-fall {
+            0% { transform: translate(var(--x), -150px) rotate(35deg); opacity: 1; }
+            100% { transform: translate(calc(var(--x) + 500px), 110vh) rotate(35deg); opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -22,49 +47,53 @@
     <div id="home">
         <div class="card">
             <h1>你好，我是 wanyangboop</h1>
-            <p>点击下方按钮，带你去看星空</p>
-            <button onclick="showStars()">进入星空模式</button>
+            <p>准备好进入银河系看流星雨了吗？</p>
+            <button onclick="enterUniverse()">开启星际旅行</button>
         </div>
     </div>
 
-    <canvas id="starfield"></canvas>
+    <div id="universe">
+        <div class="galaxy"></div>
+        <canvas id="starCanvas"></canvas>
+    </div>
 
     <script>
-        function showStars() {
-            // 隐藏主页，显示星空
+        function enterUniverse() {
             document.getElementById('home').style.opacity = '0';
             setTimeout(() => {
                 document.getElementById('home').style.display = 'none';
-                const canvas = document.getElementById('starfield');
-                canvas.style.display = 'block';
-                setTimeout(() => canvas.style.opacity = '1', 50);
-                startStarAnimation();
-            }, 1000);
+                const universe = document.getElementById('universe');
+                universe.style.display = 'block';
+                setTimeout(() => universe.style.opacity = '1', 50);
+                initSky();
+            }, 1500);
         }
 
-        function startStarAnimation() {
-            const canvas = document.getElementById('starfield');
-            const ctx = canvas.getContext('2d');
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            const stars = [];
-            for (let i = 0; i < 200; i++) {
-                stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, size: Math.random() * 2, speed: Math.random() * 0.5 });
+        function initSky() {
+            const container = document.getElementById('universe');
+            // 1. 生成海量背景繁星（银河感）
+            for (let i = 0; i < 300; i++) {
+                const s = document.createElement('div');
+                s.style.position = 'absolute';
+                s.style.background = 'white';
+                s.style.borderRadius = '50%';
+                const size = Math.random() * 2;
+                s.style.width = s.style.height = size + 'px';
+                s.style.left = Math.random() * 100 + '%';
+                s.style.top = Math.random() * 100 + '%';
+                s.style.opacity = Math.random();
+                container.appendChild(s);
             }
-            function animate() {
-                ctx.fillStyle = 'black';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = 'white';
-                stars.forEach(s => {
-                    ctx.beginPath();
-                    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-                    ctx.fill();
-                    s.y += s.speed;
-                    if (s.y > canvas.height) s.y = 0;
-                });
-                requestAnimationFrame(animate);
+            // 2. 生成流星雨
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    const m = document.createElement('div');
+                    m.className = 'meteor';
+                    m.style.setProperty('--x', (Math.random() * 120 - 20) + 'vw');
+                    m.style.setProperty('--d', (Math.random() * 2 + 1) + 's');
+                    container.appendChild(m);
+                }, i * 300);
             }
-            animate();
         }
     </script>
 </body>
