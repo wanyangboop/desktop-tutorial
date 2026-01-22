@@ -2,116 +2,95 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>wanyangboop 的星际闪避 - 修复版</title>
+    <title>wanyangboop: 星际战机 2.0</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #050505; font-family: 'Arial', sans-serif; color: white; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Arial', sans-serif; color: white; }
         #game-container { position: relative; width: 100vw; height: 100vh; cursor: none; background: radial-gradient(circle at center, #1b2735 0%, #050505 100%); }
-        #player { position: absolute; width: 35px; height: 35px; background: #667eea; border-radius: 8px; box-shadow: 0 0 20px #667eea; transform: translate(-50%, -50%); pointer-events: none; z-index: 100; border: 2px solid #fff; }
+        
+        /* 战机设计：精致三角形 */
+        #player { position: absolute; width: 0; height: 0; 
+                 border-left: 20px solid transparent; border-right: 20px solid transparent;
+                 border-bottom: 40px solid #667eea; 
+                 filter: drop-shadow(0 0 15px #667eea); 
+                 transform: translate(-50%, -50%); pointer-events: none; z-index: 100; transition: border-bottom-color 0.2s; }
+        
+        /* 无敌光圈样式 */
+        #shield { position: absolute; width: 80px; height: 80px; border: 3px solid #ffcc00; 
+                  border-radius: 50%; display: none; transform: translate(-50%, -50%); 
+                  box-shadow: 0 0 20px #ffcc00; pointer-events: none; z-index: 101; }
+
         .enemy { position: absolute; width: 25px; height: 25px; background: #ff4b2b; border-radius: 50%; box-shadow: 0 0 15px #ff4b2b; }
-        #score { position: fixed; top: 20px; left: 20px; font-size: 24px; z-index: 200; font-weight: bold; text-shadow: 2px 2px 4px #000; }
+        
+        /* 技能掉落物：能量球 */
+        .powerup { position: absolute; width: 20px; height: 20px; background: #00ffcc; border-radius: 50%; box-shadow: 0 0 20px #00ffcc; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+
+        #ui { position: fixed; top: 20px; left: 20px; z-index: 200; font-weight: bold; text-shadow: 2px 2px 4px #000; }
         #menu { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 300; background: rgba(0,0,0,0.9); padding: 50px; border-radius: 20px; border: 2px solid #667eea; box-shadow: 0 0 50px rgba(102,126,234,0.3); }
-        h1 { margin-top: 0; color: #667eea; }
-        button { background: #667eea; color: white; border: none; padding: 15px 40px; border-radius: 30px; cursor: pointer; font-size: 1.2rem; transition: 0.3s; font-weight: bold; }
+        button { background: #667eea; color: white; border: none; padding: 15px 40px; border-radius: 30px; cursor: pointer; font-size: 1.2rem; transition: 0.3s; }
         button:hover { background: #764ba2; transform: scale(1.1); }
     </style>
 </head>
 <body>
 
     <div id="game-container">
-        <div id="score">得分: 0</div>
+        <div id="ui">
+            <div id="score">得分: 0</div>
+            <div id="difficulty">难度: 1.0</div>
+        </div>
         <div id="player"></div>
+        <div id="shield"></div>
         <div id="menu">
-            <h1>星际闪避</h1>
-            <p>移动鼠标控制蓝色方块，躲避红色陨石！</p>
-            <button onclick="startGame()">开始游戏</button>
+            <h1>星际战机 2.0</h1>
+            <p>躲避陨石，捡取绿色能量球获得 3 秒无敌！</p>
+            <button onclick="startGame()">开始航行</button>
         </div>
     </div>
 
     <script>
         const player = document.getElementById('player');
+        const shield = document.getElementById('shield');
         const container = document.getElementById('game-container');
         const scoreElement = document.getElementById('score');
+        const diffElement = document.getElementById('difficulty');
         const menu = document.getElementById('menu');
         
-        let score = 0;
-        let gameActive = false;
-        let enemies = [];
-        let animationId;
+        let score = 0, gameActive = false, isInvincible = false;
+        let enemies = [], powerups = [], animationId;
+        let spawnRate = 0.05, difficulty = 1.0;
 
-        // 鼠标跟随
         document.addEventListener('mousemove', (e) => {
-            player.style.left = e.clientX + 'px';
-            player.style.top = e.clientY + 'px';
+            player.style.left = shield.style.left = e.clientX + 'px';
+            player.style.top = shield.style.top = e.clientY + 'px';
         });
 
         function startGame() {
-            // 1. 重置所有数据
-            score = 0;
-            gameActive = true;
+            score = 0; difficulty = 1.0; spawnRate = 0.05;
+            gameActive = true; isInvincible = false;
             menu.style.display = 'none';
-            scoreElement.innerText = `得分: ${score}`;
+            shield.style.display = 'none';
+            player.style.borderBottomColor = '#667eea';
             
-            // 2. 清除旧的敌人
             enemies.forEach(e => e.element.remove());
-            enemies = [];
+            powerups.forEach(p => p.element.remove());
+            enemies = []; powerups = [];
             
-            // 3. 停止之前的循环（防止双倍速度）
             if (animationId) cancelAnimationFrame(animationId);
-            
-            // 4. 开启新循环
             update();
         }
 
         function createEnemy() {
-            if (!gameActive) return;
             const enemy = document.createElement('div');
             enemy.className = 'enemy';
             enemy.style.left = Math.random() * (window.innerWidth - 30) + 'px';
             enemy.style.top = '-50px';
             container.appendChild(enemy);
-            enemies.push({
-                element: enemy,
-                y: -50,
-                speed: 4 + Math.random() * 6
-            });
+            enemies.push({ element: enemy, y: -50, speed: 4 + Math.random() * 5 });
         }
 
-        function update() {
-            if (!gameActive) return;
-
-            if (Math.random() < 0.06) createEnemy();
-
-            for (let i = enemies.length - 1; i >= 0; i--) {
-                const e = enemies[i];
-                e.y += e.speed;
-                e.element.style.top = e.y + 'px';
-
-                const rect1 = player.getBoundingClientRect();
-                const rect2 = e.element.getBoundingClientRect();
-
-                if (!(rect1.right < rect2.left || rect1.left > rect2.right || 
-                      rect1.bottom < rect2.top || rect1.top > rect2.bottom)) {
-                    gameOver();
-                    return; // 立即停止更新
-                }
-
-                if (e.y > window.innerHeight) {
-                    e.element.remove();
-                    enemies.splice(i, 1);
-                    score++;
-                    scoreElement.innerText = `得分: ${score}`;
-                }
-            }
-            animationId = requestAnimationFrame(update);
-        }
-
-        function gameOver() {
-            gameActive = false;
-            cancelAnimationFrame(animationId);
-            menu.style.display = 'block';
-            // 这里的 HTML 结构保持不变，确保按钮点击依然触发 startGame
-            menu.innerHTML = `<h1>游戏结束</h1><p style='font-size:20px'>最终得分: ${score}</p><button onclick="startGame()">再来一局</button>`;
-        }
-    </script>
-</body>
-</html>
+        function createPowerup() {
+            const p = document.createElement('div');
+            p.className = 'powerup';
+            p.style.left = Math.random() * (window.innerWidth - 20) + 'px';
+            p.style.top = '-50px';
+            container.appendChild(p);
